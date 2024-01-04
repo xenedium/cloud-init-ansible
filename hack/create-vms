@@ -1,0 +1,75 @@
+#!/use/bin/env bash
+
+# Vagrant would be a better option, but I wanted to learn how to do it with QEMU/KVM and cloud-init \(^_^)/
+print_usage() {
+  echo "Usage: $0 [-h|--help] <image_file> <ssh_public_key>"
+  exit 1
+}
+
+if [ "$#" -lt 2 ]; then
+  print_usage
+fi
+
+if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+  print_usage
+fi
+
+IMAGE=$1
+VM_CORES=1
+VM_THREADS=2
+VM_MEMORY='4G'
+SSH_PUBKEY=$2
+
+qemu-img resize $IMAGE 25G
+
+for i in {1..3}; do
+cat << EOF > meta-data
+instance-id: node
+local-hostname: node-$i
+EOF
+
+cat << EOF > user-data
+#cloud-config
+ssh_pwauth: false
+
+users:
+- name: ansible
+  gecos: Ansible User
+  groups: users,admin,wheel
+  sudo: ALL=(ALL) NOPASSWD:ALL
+  shell: /bin/bash
+  lock_passwd: true
+  ssh_authorized_keys:
+    - $SSH_PUBKEY
+runcmd:
+  - sudo poweroff
+EOF
+
+genisoimage -output cloud-init-node-$i.iso -volid cidata -joliet -rock user-data meta-data
+cp $IMAGE node-$i.qcow2
+
+echo "Starting VM w/ QEMU/KVM: node-$i..."
+
+qemu-system-x86_64 -enable-kvm -m $VM_MEMORY -vnc :0 -cpu host -smp cores=$VM_CORES,threads=$VM_THREADS -nic bridge,br=br0,mac=$(python qemu-mac-hasher.py node-$i) -hda node-$i.qcow2 -cdrom cloud-init-node-$i.iso
+
+rm cloud-init-node-$i.iso user-data meta-data
+done
+
+cat << EOF > start-vms
+#!/bin/bash
+echo "Starting node-1..."
+qemu-system-x86_64 -enable-kvm -m $VM_MEMORY -vnc :0 -cpu host -smp cores=$VM_CORES,threads=$VM_THREADS -nic bridge,br=br0,mac=$(python qemu-mac-hasher.py node-1) -hda node-1.qcow2 &
+echo "Starting node-2..."
+qemu-system-x86_64 -enable-kvm -m $VM_MEMORY -vnc :1 -cpu host -smp cores=$VM_CORES,threads=$VM_THREADS -nic bridge,br=br0,mac=$(python qemu-mac-hasher.py node-2) -hda node-2.qcow2 &
+echo "Starting node-3..."
+qemu-system-x86_64 -enable-kvm -m $VM_MEMORY -vnc :2 -cpu host -smp cores=$VM_CORES,threads=$VM_THREADS -nic bridge,br=br0,mac=$(python qemu-mac-hasher.py node-3) -hda node-3.qcow2 &
+
+wait
+
+echo "All the VMS exited"
+EOF
+
+chmod u+x start-vms
+
+echo "Success, the 3 VMs have been created (node-1.qcow2, node-2.qcow2, node-3.qcow2)"
+echo "Run ./start-vms to start the vms"

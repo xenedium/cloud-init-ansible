@@ -1,0 +1,44 @@
+- name: Install kubectl, kubeadm, kubelet and CRI-O (v1.29) | CentOS 9 Stream
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Yum | Add CRI-O repository
+      ansible.builtin.yum_repository:
+        name: CRI-O
+        baseurl: https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/rpm/
+        gpgcheck: true
+        gpgkey:
+          - https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/rpm/repodata/repomd.xml.key
+        enabled: true
+        description: CRI-O Prerelease
+
+    - name: Yum | Add Kubernetes repository
+      ansible.builtin.yum_repository:
+        name: Kubernetes
+        baseurl: https://pkgs.k8s.io/core:/stable:/v1.29/rpm/
+        gpgcheck: true
+        gpgkey:
+          - https://pkgs.k8s.io/core:/stable:/v1.29/rpm/repodata/repomd.xml.key
+        enabled: true
+        description: Kubernetes Stable
+
+    - name: Dnf | Install required packages
+      ansible.builtin.dnf:
+        name:
+          - conntrack
+          - container-selinux
+          - ebtables
+          - ethtool
+          - iptables
+          - socat
+        state: present
+
+    - name: Dnf | Install packages from added repositories
+      ansible.builtin.dnf:
+        name:
+          - cri-o
+          - kubeadm
+          - kubectl
+          - kubelet
+        state: present

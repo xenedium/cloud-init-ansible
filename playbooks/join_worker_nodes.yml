@@ -1,0 +1,9 @@
+- name: Join worker nodes to the control plane
+  hosts: nodes
+  become: true
+
+  tasks:
+    - name: Join cluster
+      ansible.builtin.command: "{{ hostvars['node-1'].join_command }}"
+      register: output
+      changed_when: output.stdout.find('This node has joined the cluster') != -1

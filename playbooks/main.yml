@@ -1,0 +1,15 @@
+- name: Main Playbook
+  hosts: all
+  gather_facts: true
+
+- name: Include Install packages Playbook
+  import_playbook: install_packages.yml
+
+- name: Include Preconfigure cluster Playbook
+  import_playbook: preconfigure_cluster.yml
+
+- name: Include Bootstrap Control Plane Playbook
+  import_playbook: bootstrap_control_plane.yml
+
+- name: Include Join Worker Nodes Playbook
+  import_playbook: join_worker_nodes.yml

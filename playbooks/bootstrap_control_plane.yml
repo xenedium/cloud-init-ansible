@@ -1,0 +1,29 @@
+- name: Bootstrap control plane
+  hosts: control_plane
+  become: true
+
+  tasks:
+    - name: Run kubeadm init
+      ansible.builtin.command: kubeadm init --pod-network-cidr=10.244.0.0/16
+      args:
+        creates: /etc/kubernetes/admin.conf
+      register: output
+      changed_when: output.stdout.find('Your Kubernetes control-plane has initialized successfully!') != -1
+
+    - name: Copy kubeconfig
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        remote_src: true
+        dest: /home/ansible/.kube/config
+        owner: ansible
+        group: ansible
+        mode: "0600"
+
+    - name: Get join command
+      ansible.builtin.command: kubeadm token create --print-join-command
+      register: join_command
+      changed_when: join_command.stdout.find('kubeadm join') != -1
+
+    - name: Set join command
+      ansible.builtin.set_fact:
+        join_command: "{{ join_command.stdout_lines[0] }}"

@@ -1,0 +1,61 @@
+- name: Setup cluster before Bootstrap (Start kernel modules and setup services and ip forward)
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Ensure br_netfilter kernel modules is loaded, if not load it and ensure it's loaded on boot
+      community.general.modprobe:
+        name: br_netfilter
+        state: present
+        persistent: present
+
+    - name: Ensure overlay kernel modules is loaded, if not load it and ensure it's loaded on boot
+      community.general.modprobe:
+        name: overlay
+        state: present
+        persistent: present
+
+    - name: Ensure net.bridge.bridge-nf-call-iptables is set to 1
+      ansible.posix.sysctl:
+        name: net.bridge.bridge-nf-call-iptables
+        value: 1
+        sysctl_set: true
+        state: present
+
+    - name: Ensure net.bridge.bridge-nf-call-ip6tables is set to 1 # you never know, maybe we'll get ipv6 one day...
+      ansible.posix.sysctl:
+        name: net.bridge.bridge-nf-call-ip6tables
+        value: 1
+        sysctl_set: true
+        state: present
+
+    - name: Ensure net.ipv4.ip_forward is set to 1
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: 1
+        sysctl_set: true
+        state: present
+
+    - name: Ensure net.ipv4.ip_forward, net.bridge.bridge-nf-call-iptables and net.bridge.bridge-nf-call-ip6tables are set on boot
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.d/k8s.conf
+        line: "{{ item }}"
+        create: true
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - net.ipv4.ip_forward=1
+        - net.bridge.bridge-nf-call-iptables=1
+        - net.bridge.bridge-nf-call-ip6tables=1
+
+    - name: Ensure CRI-O is enabled and started
+      ansible.builtin.service:
+        name: crio
+        enabled: true
+        state: started
+
+    - name: Ensure kubelet is enabled
+      ansible.builtin.service:
+        name: kubelet
+        enabled: true
