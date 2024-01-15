@@ -1,2 +1,6 @@
-key.pem
+**/key.pem
+**/key.pub
+**/key.pem.pub
 .vscode/
+**/*.qcow2
+hack/start-vms
