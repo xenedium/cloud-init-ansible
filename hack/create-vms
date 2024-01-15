@@ -1,4 +1,4 @@
-#!/use/bin/env bash
+#!/usr/bin/env bash
 
 # Vagrant would be a better option, but I wanted to learn how to do it with QEMU/KVM and cloud-init \(^_^)/
 print_usage() {
@@ -6,7 +6,7 @@ print_usage() {
   exit 1
 }
 
-if [ "$#" -lt 2 ]; then
+if [ "$#" -lt 1 ]; then
   print_usage
 fi
 
@@ -18,7 +18,13 @@ IMAGE=$1
 VM_CORES=1
 VM_THREADS=2
 VM_MEMORY='4G'
-SSH_PUBKEY=$2
+
+if [ "$#" -lt 2 ]; then
+  yes | ssh-keygen -t rsa -f key.pem -q -N "" > /dev/null 2>&1   # yes just in case an overwrite is necessary
+  SSH_PUBKEY=$(cat key.pem.pub)
+else
+  SSH_PUBKEY=$(cat $2)
+fi
 
 qemu-img resize $IMAGE 25G
 
