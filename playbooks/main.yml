@@ -2,8 +2,13 @@
   hosts: all
   gather_facts: true
 
-- name: Include Install packages Playbook
-  import_playbook: install_packages.yml
+- name: Include Install packages Playbook | CentOS 9 Stream
+  import_playbook: install_packages_RHEL.yml
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Include Install packages Playbook | Debian 12
+  import_playbook: install_packages_Debian.yml
+  when: ansible_facts['os_family'] == 'Debian'
 
 - name: Include Preconfigure cluster Playbook
   import_playbook: preconfigure_cluster.yml

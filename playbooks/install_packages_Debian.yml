@@ -1,0 +1,41 @@
+- name: Install kubectl, kubeadm, kubelet and CRI-O (v1.29) | Debian 12
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Apt | Install GPG
+      ansible.builtin.apt:
+        name: software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: Gpg | Add K8s signing key
+      ansible.builtin.apt_key:
+        url: https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key
+        state: present
+        keyring: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Apt | Add Kubernetes repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /"
+        state: present
+
+    - name: Apt | Add CRI-O signing key
+      ansible.builtin.apt_key:
+        url: https://pkgs.k8s.io/addons:/cri-o:/stable:/v1.29/deb/Release.key
+        state: present
+        keyring: /etc/apt/keyrings/cri-o-apt-keyring.gpg
+
+    - name: Apt | Add CRI-O repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://pkgs.k8s.io/addons:/cri-o:/stable:/v1.29/deb/ /"
+        state: present
+
+    - name: Apt | Install required packages
+      ansible.builtin.apt:
+        name:
+          - cri-o
+          - kubeadm
+          - kubectl
+          - kubelet
+        state: present
